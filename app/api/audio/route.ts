@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getNarration, leoStory } from "@/lib/stories";
+import { getNarration, getStory } from "@/lib/stories";
 import { isAudiobookVoice } from "@/lib/audio";
 
 const localRequests = new Map<string, number[]>();
@@ -27,15 +27,18 @@ async function isRateLimited(request: Request) {
       import("postgres"),
     ]);
     const sql = postgres(getConnectionString());
-    const [result] = await sql`
-      INSERT INTO audio_rate_limits (client_key, window_started_at, request_count)
-      VALUES (${clientIp}, date_trunc('minute', now()), 1)
-      ON CONFLICT (client_key, window_started_at)
-      DO UPDATE SET request_count = audio_rate_limits.request_count + 1
-      RETURNING request_count
-    `;
-    await sql.end();
-    return Number(result.request_count) > 10;
+    try {
+      const [result] = await sql`
+        INSERT INTO audio_rate_limits (client_key, window_started_at, request_count)
+        VALUES (${clientIp}, date_trunc('minute', now()), 1)
+        ON CONFLICT (client_key, window_started_at)
+        DO UPDATE SET request_count = audio_rate_limits.request_count + 1
+        RETURNING request_count
+      `;
+      return Number(result.request_count) > 10;
+    } finally {
+      await sql.end();
+    }
   } catch {
     return true;
   }
@@ -60,12 +63,16 @@ export async function POST(request: Request) {
   }
   if (await isRateLimited(request)) return NextResponse.json({ error: "Too many narration requests" }, { status: 429, headers: { "retry-after": "60" } });
   const body = await request.json().catch(() => ({}));
-  const sectionId = typeof body.sectionId === "string" ? body.sectionId : undefined;
-  if (sectionId && !leoStory.sections.some((section) => section.id === sectionId)) return NextResponse.json({ error: "Unknown chapter" }, { status: 400 });
+  const storySlug = typeof body.storySlug === "string" ? body.storySlug : "";
+  const story = getStory(storySlug);
+  if (!story) return NextResponse.json({ error: "Unknown story" }, { status: 400 });
+  const sectionId = typeof body.sectionId === "string" ? body.sectionId : "";
+  if (!sectionId) return NextResponse.json({ error: "Chapter is required" }, { status: 400 });
+  if (!story.sections.some((section) => section.id === sectionId)) return NextResponse.json({ error: "Unknown chapter" }, { status: 400 });
   const voice = body.voice ?? process.env.OPENAI_AUDIO_VOICE ?? "marin";
   if (!isAudiobookVoice(voice)) return NextResponse.json({ error: "Unknown narrator voice" }, { status: 400 });
   const model = process.env.OPENAI_AUDIO_MODEL || "gpt-4o-mini-tts";
-  const cacheKey = `${model}:${sectionId || "all"}:${voice}`;
+  const cacheKey = `${model}:${storySlug}:${sectionId}:${voice}`;
   const cached = audioCache.get(cacheKey);
   if (cached) return new NextResponse(cached.slice(0), { headers: { "content-type": "audio/mpeg", "x-audio-cache": "hit" } });
 
@@ -75,8 +82,8 @@ export async function POST(request: Request) {
     body: JSON.stringify({
       model,
       voice,
-      input: getNarration(sectionId),
-      instructions: "Warm, expressive children's audiobook narrator. Keep a gentle pace and make economics words clear without sounding like a lecture.",
+      input: getNarration(storySlug, sectionId),
+      instructions: story.locale === "zh-CN" ? "使用温暖、自然、富有表现力的普通话为儿童朗读。语速温和，停顿清楚，不要像讲课。" : "Warm, expressive children's audiobook narrator. Keep a gentle pace and make key ideas clear without sounding like a lecture.",
       response_format: "mp3",
     }),
   });

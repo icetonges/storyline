@@ -7,11 +7,17 @@ if (!process.env.NETLIFY_DB_URL) {
 
 const sql = postgres(getConnectionString());
 await sql`CREATE TABLE IF NOT EXISTS reading_progress (
-  visitor_id text PRIMARY KEY,
+  visitor_id text NOT NULL,
   story text NOT NULL,
   section integer NOT NULL,
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (visitor_id, story)
 )`;
+
+await sql.begin(async (transaction) => {
+  await transaction`ALTER TABLE reading_progress DROP CONSTRAINT IF EXISTS reading_progress_pkey`;
+  await transaction`ALTER TABLE reading_progress ADD PRIMARY KEY (visitor_id, story)`;
+});
 
 await sql`CREATE TABLE IF NOT EXISTS audio_rate_limits (
   client_key text NOT NULL,
