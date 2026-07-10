@@ -9,7 +9,7 @@ export function AudioPlayer({ storySlug, locale, sections }: { storySlug: string
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [downloadStatus, setDownloadStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [downloadStatus, setDownloadStatus] = useState<"idle" | "saved" | "error" | "rate">("idle");
   const [chapter, setChapter] = useState(0);
   const [speed, setSpeed] = useState(1);
   const [voice, setVoice] = useState<AudiobookVoice>("marin");
@@ -127,7 +127,11 @@ export function AudioPlayer({ storySlug, locale, sections }: { storySlug: string
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ storySlug, sectionId: sections[chapter].id, voice }),
       });
-      if (!response.ok) throw new Error("Audio download failed");
+      if (!response.ok) {
+        const details = await response.json().catch(() => ({})) as { code?: string };
+        if (response.status === 429 || details.code === "rate_limited") throw new Error("rate");
+        throw new Error("audio");
+      }
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -139,8 +143,9 @@ export function AudioPlayer({ storySlug, locale, sections }: { storySlug: string
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setDownloadStatus("saved");
-    } catch {
-      setDownloadStatus("error");
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "audio";
+      setDownloadStatus(reason === "rate" ? "rate" : "error");
     } finally {
       setDownloading(false);
     }
@@ -173,7 +178,7 @@ export function AudioPlayer({ storySlug, locale, sections }: { storySlug: string
       <select id="audio-voice" value={voice} onChange={(event) => changeVoice(event.target.value as AudiobookVoice)}>
         {audiobookVoices.map((option) => <option key={option.id} value={option.id}>{option.label} - {option.description}{"recommended" in option && option.recommended ? " (recommended)" : ""}</option>)}
       </select>
-      <span className={`download-status ${downloadStatus}`} role="status" aria-live="polite">{downloadStatus === "saved" ? (locale === "zh-CN" ? "章节音频已下载。" : "Chapter audio downloaded.") : downloadStatus === "error" ? (locale === "zh-CN" ? "暂时无法下载，请重试。" : "Download unavailable. Please try again.") : ""}</span>
+      <span className={`download-status ${downloadStatus}`} role="status" aria-live="polite">{downloadStatus === "saved" ? (locale === "zh-CN" ? "章节音频已下载。" : "Chapter audio downloaded.") : downloadStatus === "rate" ? (locale === "zh-CN" ? "请求过于频繁，请稍后重试。" : "Too many requests. Please try again shortly.") : downloadStatus === "error" ? (locale === "zh-CN" ? "暂时无法下载，请重试。" : "Download unavailable. Please try again.") : ""}</span>
       <span className="audio-model">{locale === "zh-CN" ? "OpenAI 生成的 AI 朗读。无法连接时使用设备声音。" : "AI-generated OpenAI narration. Device voice is used as a fallback."}</span>
     </aside>
   );

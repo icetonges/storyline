@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid origin" }, { status: 400 });
   }
-  if (await isRateLimited(request)) return NextResponse.json({ error: "Too many narration requests" }, { status: 429, headers: { "retry-after": "60" } });
+  if (await isRateLimited(request)) return NextResponse.json({ error: "Too many narration requests", code: "rate_limited" }, { status: 429, headers: { "retry-after": "60" } });
   const body = await request.json().catch(() => ({}));
   const storySlug = typeof body.storySlug === "string" ? body.storySlug : "";
   const story = getStory(storySlug);
@@ -87,7 +87,15 @@ export async function POST(request: Request) {
       response_format: "mp3",
     }),
   });
-  if (!response.ok) return NextResponse.json({ error: "Narration is temporarily unavailable" }, { status: response.status });
+  if (!response.ok) {
+    const providerError = await response.json().catch(() => null) as { error?: { code?: string; type?: string } } | null;
+    console.error("OpenAI audio generation failed", {
+      status: response.status,
+      code: providerError?.error?.code,
+      type: providerError?.error?.type,
+    });
+    return NextResponse.json({ error: "Narration is temporarily unavailable", code: "audio_unavailable" }, { status: 503 });
+  }
   const audio = await response.arrayBuffer();
   cacheAudio(cacheKey, audio);
   return new NextResponse(audio.slice(0), { headers: { "content-type": "audio/mpeg", "cache-control": "private, max-age=86400", "x-audio-cache": "miss" } });
