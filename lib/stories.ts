@@ -23,6 +23,8 @@ export type Story = {
   sections: StorySection[];
 };
 
+import { financeStoryPairs, featuredFinanceStories } from "@/lib/finance-stories";
+
 export const leoStory = {
   slug: "leo-five-secrets",
   title: "Leo's Five Secrets",
@@ -332,8 +334,8 @@ export const brainBackpackChinese = {
   ],
 } satisfies Story;
 
-export const allStories: Story[] = [leoStory, brainBackpackEnglish, brainBackpackChinese];
-export const stories: Story[] = [leoStory, brainBackpackEnglish];
+export const allStories: Story[] = [leoStory, brainBackpackEnglish, brainBackpackChinese, ...financeStoryPairs];
+export const stories: Story[] = [leoStory, brainBackpackEnglish, ...featuredFinanceStories];
 
 export function getStory(slug: string) {
   return allStories.find((story) => story.slug === slug);

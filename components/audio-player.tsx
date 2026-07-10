@@ -17,6 +17,7 @@ export function AudioPlayer({ storySlug, locale, sections }: { storySlug: string
   const objectUrlRef = useRef<string | null>(null);
 
   const text = `${sections[chapter].title}. ${sections[chapter].paragraphs.join(" ")}`;
+  const inChinese = locale === "zh-CN";
 
   useEffect(() => () => {
     speechSynthesis.cancel();
@@ -157,29 +158,29 @@ export function AudioPlayer({ storySlug, locale, sections }: { storySlug: string
   }, []);
 
   return (
-    <aside className="audio-dock" aria-label={locale === "zh-CN" ? "有声书控制" : "Audiobook controls"}>
-      <div className="audio-topline"><span>{locale === "zh-CN" ? "正在朗读" : "Now reading"}</span><Volume2 size={16} /></div>
+    <aside className="audio-dock" aria-label={inChinese ? "有声书控制" : "Audiobook controls"}>
+      <div className="audio-topline"><span>{inChinese ? "正在朗读" : "Now reading"}</span><Volume2 size={16} /></div>
       <strong>{sections[chapter].title}</strong>
       <div className="audio-controls">
-        <button className="icon-button" onClick={restart} aria-label={locale === "zh-CN" ? "重新播放本章" : "Restart chapter"} title={locale === "zh-CN" ? "重新播放" : "Restart"}><RotateCcw size={18} /></button>
-        <button className="play-button" disabled={loading} onClick={playing ? pause : play} aria-label={loading ? (locale === "zh-CN" ? "正在准备有声书" : "Preparing audiobook") : playing ? (locale === "zh-CN" ? "暂停有声书" : "Pause audiobook") : (locale === "zh-CN" ? "播放有声书" : "Play audiobook")}>
+        <button className="icon-button" onClick={restart} aria-label={inChinese ? "重新播放本章" : "Restart chapter"} title={inChinese ? "重新播放" : "Restart"}><RotateCcw size={18} /></button>
+        <button className="play-button" disabled={loading} onClick={playing ? pause : play} aria-label={loading ? (inChinese ? "正在准备有声书" : "Preparing audiobook") : playing ? (inChinese ? "暂停有声书" : "Pause audiobook") : (inChinese ? "播放有声书" : "Play audiobook")}>
           {playing ? <Pause fill="currentColor" /> : <Play fill="currentColor" />}
         </button>
-        <button className="icon-button download-button" disabled={downloading} onClick={downloadChapter} aria-label={downloading ? (locale === "zh-CN" ? "正在准备下载" : "Preparing download") : (locale === "zh-CN" ? "下载当前章节音频" : "Download current chapter audio")} title={locale === "zh-CN" ? "下载章节" : "Download chapter"}><Download size={18} /></button>
-        <button className="speed-button" aria-label={locale === "zh-CN" ? `朗读速度 ${speed} 倍` : `Narration speed ${speed}x`} onClick={() => setSpeed((value) => value === 1 ? 1.25 : value === 1.25 ? 1.5 : 1)} title={locale === "zh-CN" ? "朗读速度" : "Narration speed"}>
+        <button className="icon-button download-button" disabled={downloading} onClick={downloadChapter} aria-label={downloading ? (inChinese ? "正在准备下载" : "Preparing download") : (inChinese ? "下载当前章节音频" : "Download current chapter audio")} title={inChinese ? "下载章节" : "Download chapter"}><Download size={18} /></button>
+        <button className="speed-button" aria-label={inChinese ? `朗读速度 ${speed} 倍` : `Narration speed ${speed}x`} onClick={() => setSpeed((value) => value === 1 ? 1.25 : value === 1.25 ? 1.5 : 1)} title={inChinese ? "朗读速度" : "Narration speed"}>
           <Gauge size={17} /> {speed}x
         </button>
       </div>
-      <label className="chapter-label" htmlFor="audio-chapter">{locale === "zh-CN" ? "章节" : "Chapter"}</label>
+      <label className="chapter-label" htmlFor="audio-chapter">{inChinese ? "章节" : "Chapter"}</label>
       <select id="audio-chapter" value={chapter} onChange={(event) => changeChapter(Number(event.target.value))}>
         {sections.map((section, index) => <option key={section.id} value={index}>{index + 1}. {section.title}</option>)}
       </select>
-      <label className="voice-label" htmlFor="audio-voice">{locale === "zh-CN" ? "朗读声音" : "Narrator voice"}</label>
+      <label className="voice-label" htmlFor="audio-voice">{inChinese ? "朗读声音" : "Narrator voice"}</label>
       <select id="audio-voice" value={voice} onChange={(event) => changeVoice(event.target.value as AudiobookVoice)}>
         {audiobookVoices.map((option) => <option key={option.id} value={option.id}>{option.label} - {option.description}{"recommended" in option && option.recommended ? " (recommended)" : ""}</option>)}
       </select>
-      <span className={`download-status ${downloadStatus}`} role="status" aria-live="polite">{downloadStatus === "saved" ? (locale === "zh-CN" ? "章节音频已下载。" : "Chapter audio downloaded.") : downloadStatus === "rate" ? (locale === "zh-CN" ? "请求过于频繁，请稍后重试。" : "Too many requests. Please try again shortly.") : downloadStatus === "error" ? (locale === "zh-CN" ? "暂时无法下载，请重试。" : "Download unavailable. Please try again.") : ""}</span>
-      <span className="audio-model">{locale === "zh-CN" ? "OpenAI 生成的 AI 朗读。无法连接时使用设备声音。" : "AI-generated OpenAI narration. Device voice is used as a fallback."}</span>
+      <span className={`download-status ${downloadStatus}`} role="status" aria-live="polite">{downloadStatus === "saved" ? (inChinese ? "章节音频已下载。" : "Chapter audio downloaded.") : downloadStatus === "rate" ? (inChinese ? "请求过于频繁，请稍后重试。" : "Too many requests. Please try again shortly.") : downloadStatus === "error" ? (inChinese ? "暂时无法下载，请重试。" : "Download unavailable. Please try again.") : ""}</span>
+      <span className="audio-model">{inChinese ? "OpenAI 生成的 AI 朗读。无法连接时使用设备声音。" : "AI-generated OpenAI narration. Device voice is used as a fallback."}</span>
     </aside>
   );
 }
