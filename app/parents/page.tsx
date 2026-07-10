@@ -1,0 +1,5 @@
+import { Database, Headphones, Image as ImageIcon, ShieldCheck } from "lucide-react";
+
+export default function ParentsPage() {
+  return <main className="parents-page"><div className="page-heading"><span className="kicker">For grown-ups</span><h1>Built for calm, curious reading.</h1><p>Storyline gives children room to read, listen, pause, and test an idea without scores or pressure.</p></div><section className="principles"><article><Headphones /><h2>Listen along</h2><p>OpenAI narration is used when configured; the device voice keeps playback available without an account.</p></article><article><ShieldCheck /><h2>Private by default</h2><p>Reading progress is stored locally first. Netlify DB syncing is anonymous and optional.</p></article><article><ImageIcon /><h2>Efficient pictures</h2><p>Cloudinary can fetch, resize, and optimize every story illustration for the reader's screen.</p></article><article><Database /><h2>Simple records</h2><p>The database stores story progress and content metadata, while media remains in Cloudinary.</p></article></section></main>;
+}
